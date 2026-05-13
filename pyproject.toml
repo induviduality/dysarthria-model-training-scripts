@@ -55,13 +55,6 @@ stream = [
 #       --index-url https://download.pytorch.org/whl/cu128 --reinstall
 #
 # setup_runpod.sh handles this automatically with --cuda cu128.
-[tool.uv.sources]
-torch = [
-    { index = "pytorch-cu121", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
-]
-torchaudio = [
-    { index = "pytorch-cu121", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
-]
 
 [[tool.uv.index]]
 name = "pytorch-cu128"
