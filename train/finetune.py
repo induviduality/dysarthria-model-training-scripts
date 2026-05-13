@@ -1026,12 +1026,12 @@ def main():
     if safety_steps > 0:
         callbacks.append(SafetyCheckpointCallback(every_n_steps=safety_steps))
 
-    if speaker_val_data:
-        callbacks.append(PerSpeakerWERCallback(
-            speaker_val_data = speaker_val_data,
-            processor        = processor,
-            sr               = cfg["dataset"]["sampling_rate"],
-        ))
+    # if speaker_val_data:
+    #     callbacks.append(PerSpeakerWERCallback(
+    #         speaker_val_data = speaker_val_data,
+    #         processor        = processor,
+    #         sr               = cfg["dataset"]["sampling_rate"],
+    #     ))
 
     # GracefulInterruptCallback must be last so Ctrl+C can override any other
     # callback that sets should_training_stop = False.
