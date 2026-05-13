@@ -1,6 +1,5 @@
 # Datasets
 prepared_dataset/
-data/
 datasets/
 
 # Model outputs (all training + conversion outputs)
