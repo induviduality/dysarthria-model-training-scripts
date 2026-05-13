@@ -972,21 +972,21 @@ def main():
         )
 
     # ── Per-speaker val data (built from raw val before preprocessing) ─────
-    speaker_col      = cfg["dataset"].get("speaker_column", "speaker_id")
-    try:
-        speaker_val_data = build_speaker_val_data(
-            ds[val_split],
-            audio_col   = cfg["dataset"]["audio_column"],
-            text_col    = cfg["dataset"]["text_column"],
-            speaker_col = speaker_col,
-            sr          = cfg["dataset"]["sampling_rate"],
-        )
-    except Exception as e:
-        log.warning(
-            f"Per-speaker WER evaluation disabled: {type(e).__name__}: {e}\n"
-            f"(This is expected on local dev if FFmpeg/torchcodec is unavailable.)"
-        )
-        speaker_val_data = {}
+    # speaker_col      = cfg["dataset"].get("speaker_column", "speaker_id")
+    # try:
+    #     speaker_val_data = build_speaker_val_data(
+    #         ds[val_split],
+    #         audio_col   = cfg["dataset"]["audio_column"],
+    #         text_col    = cfg["dataset"]["text_column"],
+    #         speaker_col = speaker_col,
+    #         sr          = cfg["dataset"]["sampling_rate"],
+    #     )
+    # except Exception as e:
+    #     log.warning(
+    #         f"Per-speaker WER evaluation disabled: {type(e).__name__}: {e}\n"
+    #         f"(This is expected on local dev if FFmpeg/torchcodec is unavailable.)"
+    #     )
+    speaker_val_data = {}
 
     # ── Model + LoRA ───────────────────────────────────────────────────────
     model, processor = load_model_with_lora(cfg, hf_token)
