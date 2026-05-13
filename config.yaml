@@ -117,19 +117,18 @@ dataset:
   # Local / network-volume path (used when source=local) ────────────────
   # On RunPod this is typically the network volume mount path.
   # setup_runpod.sh will override this via --dataset-path or $DATASET_PATH.
-  local_path: "/workspace/prepared_dataset"
+  local_path: "/workspace/model-training-stuff/dataset-outputs"
 
   # HuggingFace Hub (used when source=huggingface) ───────────────────────
   # Run: python prepare_hf_dataset.py --dataset_root ... --output_repo your-username/dysarthria-prepared
   # hf_dataset_id: "CHANGE_ME/dysarthria-prepared"
   train_split: "train"
-  validation_split: "validation"
-  # Speaker-based validation split (takes priority over validation_pct).
-  # These speakers are completely withheld from training and used as the val set.
-  # TORGO M05 and UASpeech F02 are held out to measure generalisation to unseen speakers.
-  validation_speakers:
-    - "M05"
-    - "F02"
+  # Test split speakers (TORGO: F01, M01 | UASpeech: F03, M07) are fully unseen during
+  # training and serve as the validation set. All speakers inside train/ are used for training.
+  validation_split: "test"
+  # Speaker-based holdout from train — disabled so all train samples are used.
+  # Previously held out M05 (TORGO) and F02 (UASpeech); unseen speakers now come from test split.
+  validation_speakers: []
   speaker_column: "speaker_id"  # Column name in your HF dataset for speaker labels.
   # Fallback: used only when validation_speakers is empty and dataset has no val split.
   validation_pct: 0.1
@@ -141,9 +140,9 @@ dataset:
   sampling_rate: 16000
 
 output:
-  dir: "./model-outputs/finetuned"
-  merged_model_dir: "./model-outputs/model-hf"
-  ct2_model_dir: "./model-outputs/model-ct2"
+  dir: "/workspace/model-training-stuff/model-outputs/finetuned"
+  merged_model_dir: "/workspace/model-training-stuff/model-outputs/model-hf"
+  ct2_model_dir: "/workspace/model-training-stuff/model-outputs/model-ct2"
 
 evaluation:
   # CHANGE_ME: paste your pre-measured baseline WER here (e.g., 45.3).
