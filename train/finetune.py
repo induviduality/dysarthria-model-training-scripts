@@ -300,6 +300,9 @@ def load_data(cfg: dict, hf_token: Optional[str]) -> DatasetDict:
             **{k: v for k, v in ds.items() if k not in (train_split_name, val_split_name, "test")},
         })
 
+    elif val_split_name in ds:
+        log.info(f"Using existing '{val_split_name}' split as validation ({len(ds[val_split_name])} samples)")
+
     else:
         val_pct = cfg["dataset"].get("validation_pct", 0.1)
         seed    = cfg["dataset"].get("seed", 42)
