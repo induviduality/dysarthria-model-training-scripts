@@ -300,18 +300,16 @@ def load_data(cfg: dict, hf_token: Optional[str]) -> DatasetDict:
             **{k: v for k, v in ds.items() if k not in (train_split_name, val_split_name, "test")},
         })
 
-    elif val_split_name not in ds:
+    else:
         val_pct = cfg["dataset"].get("validation_pct", 0.1)
         seed    = cfg["dataset"].get("seed", 42)
         log.info(
-            f"No '{val_split_name}' split and no validation_speakers set — "
-            f"carving {val_pct*100:.0f}% from '{train_split_name}' (seed={seed})"
+            f"Carving {val_pct*100:.0f}% of '{train_split_name}' as validation (seed={seed})"
         )
         split_result = ds[train_split_name].train_test_split(test_size=val_pct, seed=seed)
         ds = DatasetDict({
             train_split_name: split_result["train"],
             val_split_name:   split_result["test"],
-            **{k: v for k, v in ds.items() if k != train_split_name},
         })
 
     log.info(f"Dataset: {ds}")
