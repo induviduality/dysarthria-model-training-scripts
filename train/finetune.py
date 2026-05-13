@@ -271,9 +271,6 @@ def load_data(cfg: dict, hf_token: Optional[str]) -> DatasetDict:
         val_set     = set(val_speakers)
 
         all_train_rows = ds[train_split_name]
-        if "test" in ds and speaker_col in ds["test"].column_names:
-            from datasets import concatenate_datasets
-            all_train_rows = concatenate_datasets([all_train_rows, ds["test"]])
 
         if speaker_col not in all_train_rows.column_names:
             raise ValueError(
@@ -300,7 +297,7 @@ def load_data(cfg: dict, hf_token: Optional[str]) -> DatasetDict:
         ds = DatasetDict({
             train_split_name: train_ds_raw,
             val_split_name:   val_ds_raw,
-            **{k: v for k, v in ds.items() if k not in (train_split_name, "test")},
+            **{k: v for k, v in ds.items() if k not in (train_split_name, val_split_name, "test")},
         })
 
     elif val_split_name not in ds:
