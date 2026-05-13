@@ -374,17 +374,7 @@ def make_preprocess_fn(processor: WhisperProcessor, cfg: dict):
 
 
 def preprocess_split(ds_split, processor, cfg, desc: str):
-    # Use num_proc=0 to avoid multiprocessing audio decoding issues on Windows.
-    # For RunPod (Linux), set num_proc from config or default to 4.
-    num_proc = 0 if cfg.get("_allow_cpu") else cfg["training"].get("dataloader_num_workers", 4)
-
-    # Prefer decode=False so datasets returns raw {path, bytes} dicts instead of
-    # going through its audio backend. On datasets>=4.x this may still return an
-    # AudioDecoder object; make_preprocess_fn handles that path explicitly.
-    audio_col = cfg["dataset"]["audio_column"]
-    if audio_col in ds_split.column_names:
-        from datasets import Audio as _Audio
-        ds_split = ds_split.cast_column(audio_col, _Audio(decode=False))
+    num_proc = 1  # TODO: restore from config once AudioDecoder path is confirmed stable
 
     return ds_split.map(
         make_preprocess_fn(processor, cfg),
@@ -515,7 +505,7 @@ class SpeechCollator:
         label_feats  = [{"input_ids": f["labels"]}              for f in features]
 
         batch        = self.processor.feature_extractor.pad(input_feats, return_tensors="pt")
-        labels_batch = self.processor.tokenizer.pad(label_feats, return_tensors="pt")
+        labels_batch = self.processor.tokenizer.pad(label_feats, return_tensors="pt", return_attention_mask=True)
 
         labels = labels_batch["input_ids"].masked_fill(
             labels_batch.attention_mask.ne(1), -100
@@ -711,6 +701,8 @@ class DysarthriaTrainer(Seq2SeqTrainer):
         # processor captures model_kwargs and re-runs the model, causing a batch-size
         # mismatch (ValueError) when decoder_attention_mask is present in those kwargs.
         inputs = {k: v for k, v in inputs.items() if k != "decoder_attention_mask"}
+        if "input_features" in inputs:
+            inputs["input_features"] = inputs["input_features"].to(dtype=model.dtype)
         return super().prediction_step(model, inputs, prediction_loss_only, ignore_keys)
 
     def get_train_dataloader(self):
