@@ -301,7 +301,11 @@ def load_data(cfg: dict, hf_token: Optional[str]) -> DatasetDict:
         })
 
     elif val_split_name in ds:
-        log.info(f"Using existing '{val_split_name}' split as validation ({len(ds[val_split_name])} samples)")
+        log.info(f"Using prepared '{val_split_name}' split as validation ({len(ds[val_split_name])} samples)")
+        ds = DatasetDict({
+            train_split_name: ds[train_split_name],
+            val_split_name:   ds[val_split_name],
+        })
 
     else:
         val_pct = cfg["dataset"].get("validation_pct", 0.1)

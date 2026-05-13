@@ -123,11 +123,10 @@ dataset:
   # Run: python prepare_hf_dataset.py --dataset_root ... --output_repo your-username/dysarthria-prepared
   # hf_dataset_id: "CHANGE_ME/dysarthria-prepared"
   train_split: "train"
-  # Test split speakers (TORGO: F01, M01 | UASpeech: F03, M07) are fully unseen during
-  # training and serve as the validation set. All speakers inside train/ are used for training.
-  validation_split: "test"
-  # Speaker-based holdout from train — disabled so all train samples are used.
-  # Previously held out M05 (TORGO) and F02 (UASpeech); unseen speakers now come from test split.
+  # Use the prepared validation split from prepare_hf_dataset.py (10% of train, carved at prep time).
+  # The test split (TORGO: F01, M01 | UASpeech: F03, M07) is held out entirely for final eval.
+  validation_split: "validation"
+  # Speaker-based holdout from train — disabled; validation comes from the prepared split above.
   validation_speakers: []
   speaker_column: "speaker_id"  # Column name in your HF dataset for speaker labels.
   # Fallback: used only when validation_speakers is empty and dataset has no val split.
