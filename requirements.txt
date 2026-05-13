@@ -1,0 +1,43 @@
+# ── Fallback requirements file ────────────────────────────────────────────────
+# pyproject.toml is the authoritative dependency source for uv users.
+# Use this file only if you are not using uv:
+#   pip install -r requirements.txt
+#
+# With uv (recommended):
+#   uv sync                        # installs everything including CUDA torch on Linux
+#   uv sync --extra ct2            # also installs ctranslate2 + faster-whisper
+#
+# Core ML — install the CUDA build separately before this file:
+#   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu121
+torch>=2.1.0
+torchaudio>=2.1.0
+
+# HuggingFace stack
+transformers>=4.40.0
+accelerate>=0.28.0
+peft>=0.10.0
+datasets>=2.18.0
+huggingface_hub>=0.20.0
+
+# Audio processing
+librosa>=0.10.0
+soundfile>=0.12.0
+
+# Metrics
+evaluate>=0.4.0
+jiwer>=3.0.0
+num2words>=0.5.12
+
+# Logging
+tensorboard>=2.15.0
+wandb
+
+# Streaming inference (not needed for training — install separately for stream_transcribe.py)
+# sounddevice>=0.4.6
+# flash-attn            # optional: install separately for A100/L4/H100 speed-up
+#                       # pip install flash-attn --no-build-isolation
+
+# Utilities
+pyyaml>=6.0
+numpy>=1.24.0
+tqdm>=4.65.0

@@ -1,0 +1,160 @@
+# config.yaml — All hyperparameters for whisper-large-v3 LoRA fine-tuning.
+# Edit ONLY the values marked CHANGE_ME before launching on RunPod.
+
+model:
+  # RunPod target model. DO NOT change this for RunPod training.
+  # For a quick local test of the training loop (not RunPod), override via CLI:
+  #   python finetune.py --model_name openai/whisper-small --epochs 2 --batch_size 2
+  # For smoke-testing the pipeline components:
+  #   python smoke_test.py --model openai/whisper-tiny        (CPU, ~2 min)
+  #   python smoke_test.py --model openai/whisper-small       (GPU recommended)
+  name: "openai/whisper-large-v3"
+  language: "en"
+  task: "transcribe"
+
+# LoRA adapter config — r=16 is a safe start for a small dysarthric dataset.
+# Increase r to 32 if underfitting; add "k_proj"/"out_proj"/"fc1"/"fc2" for
+# more capacity at the cost of VRAM.
+lora:
+  r: 32
+  alpha: 64
+  dropout: 0.05
+  bias: "none"
+  # Minimal set: attention query+value in both encoder and decoder (includes
+  # cross-attention). Covers the most impactful layers with least VRAM.
+  target_modules:
+    - "q_proj"
+    - "v_proj"
+    - "k_proj"
+    - "out_proj"
+    - "fc1"
+    - "fc2"
+  # Set true to apply LoRA ONLY to decoder layers (saves ~30% VRAM).
+  # For dysarthric speech the encoder changes matter — keep false unless
+  # you're very memory-constrained.
+  decoder_only: false
+
+training:
+  epochs: 30            # Fallback only — max_steps below takes priority.
+  # Primary stopping criterion: step budget (strategy §3).
+  # With 12,085 dysarthric samples and batch 12, one "true pass" ≈ 755 steps.
+  # Target 5–10 effective passes = 3,775–7,550 steps; 5,000 is the default midpoint.
+  max_steps: 4000
+  # L4 (24 GB):  batch_size=4, grad_accum=4  → effective batch 12
+  # A40 (48 GB): batch_size=8, grad_accum=2  → effective batch 12
+  per_device_train_batch_size: 12
+  per_device_eval_batch_size: 8
+  gradient_accumulation_steps: 1
+  learning_rate: 1.0e-4
+  lr_scheduler_type: "cosine"
+  warmup_steps: 250     # 6.25% of 4,000 steps (strategy §3: "5–10% warmup").
+  weight_decay: 0.01
+  bf16: true          # L4 and A40 both support bf16 (Ada/Ampere). Set false for V100/T4.
+  fp16: false
+  gradient_checkpointing: false   # Required for L4 (24 GB); safe to enable on A40 too.
+  # Step-based eval/save: DO NOT use "epoch" — epoch length is undefined under weighted
+  # sampling and the strategy explicitly prohibits epoch-based LR/stopping (strategy §3).
+  eval_strategy: "steps"
+  eval_steps: 500
+  save_strategy: "steps"
+  save_steps: 500
+  logging_steps: 10
+  save_total_limit: 5            # Keep best 5 checkpoints (by WER).
+  load_best_model_at_end: true
+  metric_for_best_model: "wer"
+  greater_is_better: false
+  predict_with_generate: true
+  generation_max_length: 225
+  dataloader_num_workers: 12    # Linux RunPod — multiprocessing is safe. Set 0 on Windows.
+  # Extra safety checkpoint every N steps to survive RunPod preemption.
+  # Set to 0 to disable.
+  safety_checkpoint_steps: 250
+
+early_stopping:
+  enabled: true
+  patience: 5          # Stop after 5 consecutive eval checkpoints (= 2,500 steps) without WER improvement.
+  min_delta: 0.1       # Must improve by ≥ 0.1 WER percentage points to count.
+
+# ── Weighted Sampling (strategy §2) ──────────────────────────────────────────
+# 60/40 UASpeech:TORGO ratio applied per step via WeightedRandomSampler.
+# Each TORGO sample is seen ~2.7× per UASpeech sample — manageable given 2,395 TORGO samples.
+sampling:
+  enabled: true
+  ua_frac: 0.60
+  torgo_frac: 0.40
+  dataset_column: "dataset"   # Column in your HF dataset identifying source corpus.
+
+# ── Local Dev (single-config-change local testing) ────────────────────────────
+# Set enabled: true to run a fast local smoke run with whisper-small and small batch/steps.
+# Uses GPU by default; add --allow_cpu to run on CPU if no GPU is available.
+# Requires: dataset.source=local and dataset.local_path pointing to your prepared dataset.
+# All local_dev settings are overridden by explicit CLI flags (--model_name, --max_steps etc.).
+local_dev:
+  enabled: false
+  model_name: "openai/whisper-small"
+  max_steps: 200
+  per_device_train_batch_size: 1
+  gradient_accumulation_steps: 1
+  eval_steps: 50
+  save_steps: 50
+  warmup_steps: 10
+  gradient_checkpointing: false   # Not needed / causes issues on CPU.
+  bf16: false
+  fp16: false
+  dataset_source: "local"         # Falls through to dataset.local_path.
+  dataloader_num_workers: 0       # Windows multiprocessing requires 0.
+
+dataset:
+  # ── Toggle between local/network-volume and HuggingFace Hub ───────────
+  # RUNPOD (network volume): source=local, set local_path to your volume mount
+  #   Default mount: /workspace/prepared_dataset
+  #   Override at launch: bash setup_runpod.sh --dataset-path /runpod-volume/prepared_dataset
+  #   Or set env var:      export DATASET_PATH=/runpod-volume/prepared_dataset
+  # HUGGINGFACE HUB: source=huggingface, uncomment and set hf_dataset_id below
+  source: "local"
+  # source: "huggingface"
+
+  # Local / network-volume path (used when source=local) ────────────────
+  # On RunPod this is typically the network volume mount path.
+  # setup_runpod.sh will override this via --dataset-path or $DATASET_PATH.
+  local_path: "/workspace/prepared_dataset"
+
+  # HuggingFace Hub (used when source=huggingface) ───────────────────────
+  # Run: python prepare_hf_dataset.py --dataset_root ... --output_repo your-username/dysarthria-prepared
+  # hf_dataset_id: "CHANGE_ME/dysarthria-prepared"
+  train_split: "train"
+  validation_split: "validation"
+  # Speaker-based validation split (takes priority over validation_pct).
+  # These speakers are completely withheld from training and used as the val set.
+  # TORGO M05 and UASpeech F02 are held out to measure generalisation to unseen speakers.
+  validation_speakers:
+    - "M05"
+    - "F02"
+  speaker_column: "speaker_id"  # Column name in your HF dataset for speaker labels.
+  # Fallback: used only when validation_speakers is empty and dataset has no val split.
+  validation_pct: 0.1
+  seed: 42
+  audio_column: "audio"       # Column name in your HF dataset (Audio feature).
+  text_column: "sentence"     # Column name for transcripts. Common: sentence, text, transcript.
+  max_input_length_seconds: 30.0
+  min_input_length_seconds: 0.1
+  sampling_rate: 16000
+
+output:
+  dir: "./model-outputs/finetuned"
+  merged_model_dir: "./model-outputs/model-hf"
+  ct2_model_dir: "./model-outputs/model-ct2"
+
+evaluation:
+  # CHANGE_ME: paste your pre-measured baseline WER here (e.g., 45.3).
+  # finetune.py will log relative improvement every epoch.
+  # Set to null if you don't have a baseline yet.
+  baseline_wer: null
+  beam_size: 5
+  vad_filter: true
+
+logging:
+  tensorboard: true
+  # Set wandb: true and export WANDB_API_KEY=<key> to enable W&B tracking.
+  wandb: false
+  wandb_project: "whisper-large-dysarthria"

@@ -1,0 +1,69 @@
+[project]
+name = "whisper-fine-tune"
+version = "0.1.0"
+description = "Whisper large-v3-turbo LoRA fine-tuning for dysarthric speech"
+requires-python = ">=3.10"
+dependencies = [
+    # HuggingFace stack
+    "transformers>=4.40.0",
+    "accelerate>=0.28.0",
+    "peft>=0.10.0",
+    "datasets>=2.18.0",
+    "huggingface_hub>=0.20.0",
+    # PyTorch — pulled from the pytorch-cu121 index on Linux and Windows for GPU support.
+    # To install a different CUDA build on any platform, run after uv sync:
+    #   uv pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128 --reinstall
+    "torch>=2.1.0",
+    "torchaudio>=2.1.0",
+    # Audio
+    "librosa>=0.10.0",
+    "soundfile>=0.12.0",
+    # Metrics
+    "evaluate>=0.4.0",
+    "jiwer>=3.0.0",
+    "num2words>=0.5.12",
+    # Logging
+    "tensorboard>=2.15.0",
+    "wandb",
+    # Utilities
+    "pyyaml>=6.0",
+    "numpy>=1.24.0",
+    "tqdm>=4.65.0",
+]
+
+[project.optional-dependencies]
+# CT2 conversion and faster-whisper inference:
+#   uv sync --extra ct2
+ct2 = [
+    "ctranslate2>=4.0.0",
+    "faster-whisper>=1.0.0",
+]
+# Live microphone transcription (stream_transcribe.py):
+#   uv sync --extra stream
+stream = [
+    "sounddevice>=0.4.6",
+]
+
+# ── PyTorch CUDA index (Linux and Windows) ──────────────────────────────────────
+# On Linux and Windows, torch and torchaudio are pulled from the cu121 index
+# so you get a CUDA-enabled build automatically on `uv sync`.
+#
+# cu121 is backward-compatible with CUDA 12.1 through 12.8 drivers.
+#
+# To use a different CUDA version, override after syncing:
+#   uv pip install torch torchaudio \
+#       --index-url https://download.pytorch.org/whl/cu128 --reinstall
+#
+# setup_runpod.sh handles this automatically with --cuda cu128.
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cu121", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchaudio = [
+    { index = "pytorch-cu121", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true

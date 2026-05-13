@@ -1,0 +1,46 @@
+# Datasets
+prepared_dataset/
+data/
+datasets/
+
+# Model outputs (all training + conversion outputs)
+model-outputs/
+whisper*-finetuned/
+whisper*-merged/
+whisper*-merged-ct2/
+smoke-run/
+smoke-run-merged/
+finetuned/
+model-hf/
+model-ct2/
+smoke-finetuned/
+smoke-hf/
+smoke-ct2/
+checkpoints/
+runs/
+outputs/
+
+# Evaluation / inference outputs
+inference-outputs/
+evaluation_results*.json
+*_results*.json
+*.json
+
+# Large binary files
+*.whl
+*.pt
+*.bin
+*.safetensors
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Logs
+*.log
+wandb/

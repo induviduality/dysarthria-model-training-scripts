@@ -1,0 +1,95 @@
+# config_smoke.yaml — Fast local validation config.
+# Verifies the full pipeline (data loading, LoRA setup, training loop, eval, WER)
+# in ~2-5 min on GPU or ~15 min on CPU.
+#
+# Usage:
+#   python finetune.py --config config_smoke.yaml --local_dataset_path ./prepared_dataset
+#   python finetune.py --config config_smoke.yaml --local_dataset_path ./prepared_dataset --allow_cpu
+
+model:
+  name: "openai/whisper-tiny"
+  language: "en"
+  task: "transcribe"
+
+lora:
+  r: 4
+  alpha: 8
+  dropout: 0.05
+  bias: "none"
+  target_modules:
+    - "q_proj"
+    - "v_proj"
+  decoder_only: false
+
+training:
+  epochs: 1
+  max_steps: 20
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 1
+  learning_rate: 1.0e-4
+  lr_scheduler_type: "cosine"
+  warmup_steps: 5
+  weight_decay: 0.01
+  bf16: false
+  fp16: false
+  gradient_checkpointing: false
+  eval_strategy: "steps"
+  eval_steps: 10
+  save_strategy: "steps"
+  save_steps: 10
+  logging_steps: 5
+  save_total_limit: 1
+  load_best_model_at_end: true
+  metric_for_best_model: "wer"
+  greater_is_better: false
+  predict_with_generate: true
+  generation_max_length: 225
+  dataloader_num_workers: 0    # Required on Windows.
+  safety_checkpoint_steps: 0   # Disable — not needed for a 20-step smoke run.
+
+early_stopping:
+  enabled: false               # Don't early-stop a 20-step run.
+  patience: 5
+  min_delta: 0.1
+
+sampling:
+  enabled: false               # Skip weighted sampling overhead for validation.
+  ua_frac: 0.60
+  torgo_frac: 0.40
+  dataset_column: "dataset"
+
+local_dev:
+  enabled: false
+
+dataset:
+  source: "local"
+  local_path: "./prepared_dataset"
+  train_split: "train"
+  validation_split: "validation"
+  validation_speakers:
+    - "M05"
+    - "F02"
+  speaker_column: "speaker_id"
+  validation_pct: 0.1
+  seed: 42
+  audio_column: "audio"
+  text_column: "sentence"
+  max_input_length_seconds: 30.0
+  min_input_length_seconds: 0.1
+  sampling_rate: 16000
+
+output:
+  dir: "./model-outputs/smoke-finetuned"
+  merged_model_dir: "./model-outputs/smoke-hf"
+  ct2_model_dir: "./model-outputs/smoke-ct2"
+
+evaluation:
+  baseline_wer: null
+  beam_size: 1       # Greedy decoding — faster eval.
+  vad_filter: false
+
+logging:
+  tensorboard: false
+  wandb: false
+  wandb_project: "whisper-smoke"
