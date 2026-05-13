@@ -334,7 +334,12 @@ def make_preprocess_fn(processor: WhisperProcessor, cfg: dict):
 
         audio_data = example[audio_col]
 
-        if isinstance(audio_data, dict) and "array" in audio_data:
+        if hasattr(audio_data, "get_all_samples"):
+            # datasets>=4.x AudioDecoder object
+            decoded   = audio_data.get_all_samples()
+            array     = decoded.data.numpy().squeeze().astype(np.float32)
+            actual_sr = decoded.sample_rate
+        elif isinstance(audio_data, dict) and "array" in audio_data:
             # Already decoded (datasets<4.x or decode=True path)
             array     = np.array(audio_data["array"], dtype=np.float32)
             actual_sr = audio_data.get("sampling_rate", sr)
@@ -373,9 +378,9 @@ def preprocess_split(ds_split, processor, cfg, desc: str):
     # For RunPod (Linux), set num_proc from config or default to 4.
     num_proc = 0 if cfg.get("_allow_cpu") else cfg["training"].get("dataloader_num_workers", 4)
 
-    # Cast to Audio(decode=False) so datasets returns raw {path, bytes} dicts
-    # instead of routing through its audio backend (torchcodec in datasets>=4.x).
-    # Our preprocess function decodes via soundfile directly.
+    # Prefer decode=False so datasets returns raw {path, bytes} dicts instead of
+    # going through its audio backend. On datasets>=4.x this may still return an
+    # AudioDecoder object; make_preprocess_fn handles that path explicitly.
     audio_col = cfg["dataset"]["audio_column"]
     if audio_col in ds_split.column_names:
         from datasets import Audio as _Audio
@@ -445,11 +450,6 @@ def build_speaker_val_data(raw_val_ds, audio_col: str, text_col: str,
         )
         return {}
 
-    # Cast to Audio(decode=False) to avoid torchcodec on Windows (datasets>=4.x).
-    if audio_col in raw_val_ds.column_names:
-        from datasets import Audio as _Audio
-        raw_val_ds = raw_val_ds.cast_column(audio_col, _Audio(decode=False))
-
     import io
     import soundfile as sf
 
@@ -458,7 +458,12 @@ def build_speaker_val_data(raw_val_ds, audio_col: str, text_col: str,
         spk   = sample.get(speaker_col, "unknown")
         audio = sample[audio_col]
         try:
-            if isinstance(audio, dict) and "array" in audio:
+            if hasattr(audio, "get_all_samples"):
+                # datasets>=4.x AudioDecoder object
+                decoded   = audio.get_all_samples()
+                array     = decoded.data.numpy().squeeze().astype(np.float32)
+                actual_sr = decoded.sample_rate
+            elif isinstance(audio, dict) and "array" in audio:
                 array     = np.array(audio["array"], dtype=np.float32)
                 actual_sr = audio.get("sampling_rate", sr)
             elif isinstance(audio, dict):
