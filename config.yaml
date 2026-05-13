@@ -127,7 +127,9 @@ dataset:
   # The test split (TORGO: F01, M01 | UASpeech: F03, M07) is held out entirely for final eval.
   validation_split: "validation"
   # Speaker-based holdout from train — disabled; validation comes from the prepared split above.
-  validation_speakers: []
+  validation_speakers:
+    - "M05"
+    - "F02"
   speaker_column: "speaker_id"  # Column name in your HF dataset for speaker labels.
   # Fallback: used only when validation_speakers is empty and dataset has no val split.
   validation_pct: 0.1
