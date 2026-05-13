@@ -65,7 +65,7 @@ training:
   greater_is_better: false
   predict_with_generate: true
   generation_max_length: 225
-  dataloader_num_workers: 12    # Linux RunPod — multiprocessing is safe. Set 0 on Windows.
+  dataloader_num_workers: 1    # Linux RunPod — multiprocessing is safe. Set 0 on Windows.
   # Extra safety checkpoint every N steps to survive RunPod preemption.
   # Set to 0 to disable.
   safety_checkpoint_steps: 250
@@ -117,7 +117,7 @@ dataset:
   # Local / network-volume path (used when source=local) ────────────────
   # On RunPod this is typically the network volume mount path.
   # setup_runpod.sh will override this via --dataset-path or $DATASET_PATH.
-  local_path: "/workspace/model-training-stuff/dataset-outputs"
+  local_path: "/workspace/model-training-stuff/dataset-output"
 
   # HuggingFace Hub (used when source=huggingface) ───────────────────────
   # Run: python prepare_hf_dataset.py --dataset_root ... --output_repo your-username/dysarthria-prepared
