@@ -445,18 +445,35 @@ def build_speaker_val_data(raw_val_ds, audio_col: str, text_col: str,
         )
         return {}
 
+    # Cast to Audio(decode=False) to avoid torchcodec on Windows (datasets>=4.x).
+    if audio_col in raw_val_ds.column_names:
+        from datasets import Audio as _Audio
+        raw_val_ds = raw_val_ds.cast_column(audio_col, _Audio(decode=False))
+
+    import io
+    import soundfile as sf
+
     data: Dict[str, list] = {}
     for sample in raw_val_ds:
         spk   = sample.get(speaker_col, "unknown")
         audio = sample[audio_col]
         try:
-            if isinstance(audio, dict):
+            if isinstance(audio, dict) and "array" in audio:
                 array     = np.array(audio["array"], dtype=np.float32)
                 actual_sr = audio.get("sampling_rate", sr)
+            elif isinstance(audio, dict):
+                # decode=False: {"path": ..., "bytes": ...}
+                if audio.get("bytes"):
+                    array, actual_sr = sf.read(io.BytesIO(audio["bytes"]), dtype="float32")
+                else:
+                    array, actual_sr = sf.read(audio["path"], dtype="float32")
+            elif isinstance(audio, str):
+                array, actual_sr = sf.read(audio, dtype="float32")
             else:
-                import soundfile as sf
-                array, actual_sr = sf.read(str(audio), dtype="float32")
-        except Exception:
+                array     = np.array(audio, dtype=np.float32)
+                actual_sr = sr
+        except Exception as e:
+            log.debug(f"Skipping sample for speaker {spk!r}: {type(e).__name__}: {e}")
             continue
 
         if array.ndim > 1:
